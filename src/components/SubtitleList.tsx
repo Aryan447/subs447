@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Subtitle } from "@/lib/api";
 
 interface SubtitleListProps {
   subtitles: Subtitle[];
-  mediaName: string;
+  selectedLang: string;
+  onLangChange: (lang: string) => void;
 }
 
 const LANGUAGE_NAMES: { [key: string]: string } = {
@@ -42,9 +43,7 @@ const LANGUAGE_NAMES: { [key: string]: string } = {
   pob: "Portuguese (Brazil)",
 };
 
-export default function SubtitleList({ subtitles, mediaName }: SubtitleListProps) {
-  const [selectedLang, setSelectedLang] = useState<string>("all");
-
+export default function SubtitleList({ subtitles, selectedLang, onLangChange }: SubtitleListProps) {
   const languages = useMemo(() => {
     const uniqueLangs = Array.from(new Set(subtitles.map((s) => s.lang)));
     const priority = ["eng", "hin"];
@@ -96,7 +95,7 @@ export default function SubtitleList({ subtitles, mediaName }: SubtitleListProps
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 py-4 border-b border-gold/20 sticky top-0 bg-black/90 backdrop-blur-md z-10 -mx-6 px-6 no-scrollbar overflow-x-auto">
         <button
-          onClick={() => setSelectedLang("all")}
+          onClick={() => onLangChange("all")}
           className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
             selectedLang === "all"
               ? "bg-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)]"
@@ -108,7 +107,7 @@ export default function SubtitleList({ subtitles, mediaName }: SubtitleListProps
         {languages.map((lang) => (
           <button
             key={lang}
-            onClick={() => setSelectedLang(lang)}
+            onClick={() => onLangChange(lang)}
             className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
               selectedLang === lang
                 ? "bg-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)]"

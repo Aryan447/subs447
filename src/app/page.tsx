@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import SearchForm from "@/components/SearchForm";
 import MediaCard from "@/components/MediaCard";
 import SubtitleList from "@/components/SubtitleList";
-import { searchMedia, getSubtitles, getMediaDetails, MediaMetadata, Subtitle, Episode } from "@/lib/api";
+import DownloadZipButton from "@/components/DownloadZipButton";
+import { searchMedia, getSubtitles, getMediaDetails, MediaMetadata, Subtitle } from "@/lib/api";
 import Fuse from "fuse.js";
 
 export default function Home() {
@@ -14,6 +15,7 @@ export default function Home() {
   const [selectedMedia, setSelectedMedia] = useState<MediaMetadata | null>(null);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [isSubsLoading, setIsSubsLoading] = useState(false);
+  const [selectedLang, setSelectedLang] = useState<string>("eng");
   
   // Series specific state
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
@@ -121,7 +123,7 @@ export default function Home() {
               SubSearch
             </h1>
             <p className="text-lg text-gold/60 mb-10 text-center max-w-2xl font-light tracking-wide uppercase italic">
-              "The Golden Age of Cinema, Reimagined for the Modern Viewer"
+              &quot;The Golden Age of Cinema, Reimagined for the Modern Viewer&quot;
             </p>
           </>
         )}
@@ -137,12 +139,23 @@ export default function Home() {
               )}
             </div>
             <div className="flex-grow">
-              <button 
-                onClick={() => setSelectedMedia(null)}
-                className="mb-6 text-gold hover:text-gold-light flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-all"
-              >
-                ← Return to Gallery
-              </button>
+              <div className="flex justify-between items-start mb-6">
+                <button 
+                  onClick={() => setSelectedMedia(null)}
+                  className="text-gold hover:text-gold-light flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-all"
+                >
+                  ← Return to Gallery
+                </button>
+                {selectedMedia.type === "series" && selectedMedia.videos && (
+                  <DownloadZipButton 
+                    episodes={selectedMedia.videos} 
+                    mediaName={selectedMedia.name} 
+                    label="Download Entire Series (All Seasons)" 
+                    type="series"
+                    selectedLang={selectedLang}
+                  />
+                )}
+              </div>
               <h2 className="text-4xl font-serif font-bold mb-3 text-gold-gradient uppercase tracking-tight">{selectedMedia.name}</h2>
               <div className="flex flex-wrap gap-4 mb-6">
                 <span className="px-3 py-1 bg-red-theater text-gold-light text-[10px] font-black uppercase tracking-[0.15em] rounded shadow-inner">
@@ -210,7 +223,17 @@ export default function Home() {
               {selectedMedia.type === "series" && seasons.length > 0 && (
                 <div className="mb-8 p-6 bg-black/40 rounded-2xl border border-gold/20 space-y-6">
                   <div>
-                    <label className="block text-[10px] font-black text-gold/40 uppercase tracking-[0.2em] mb-3">Season</label>
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-[10px] font-black text-gold/40 uppercase tracking-[0.2em]">Season</label>
+                      <DownloadZipButton 
+                        episodes={episodesInSeason} 
+                        mediaName={selectedMedia.name} 
+                        label={`S${selectedSeason} ZIP`} 
+                        type="season"
+                        seasonNumber={selectedSeason}
+                        selectedLang={selectedLang}
+                      />
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {seasons.map(s => (
                         <button
@@ -261,7 +284,7 @@ export default function Home() {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
                   </div>
                 ) : (
-                  <SubtitleList subtitles={subtitles} mediaName={selectedMedia.name} />
+                  <SubtitleList subtitles={subtitles} selectedLang={selectedLang} onLangChange={setSelectedLang} />
                 )}
               </div>
             </div>
