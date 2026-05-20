@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0000; /* Deep dark red/black */
+  --foreground: #f5f5f5;
+  --theater-red: #8b0000;
+  --theater-gold: #d4af37;
+  --theater-gold-light: #f9e29c;
+  --theater-crimson: #4a0404;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-gold: var(--theater-gold);
+  --color-gold-light: var(--theater-gold-light);
+  --color-red-theater: var(--theater-red);
+  --color-crimson: var(--theater-crimson);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-image: radial-gradient(circle at top, #2a0000 0%, #0a0000 100%);
+}
+
+/* Custom scrollbar - Red & Gold */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a0000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theater-gold);
+  border-radius: 4px;
+  border: 2px solid #1a0000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theater-gold-light);
+}
+
+/* Luxury card effect */
+.theater-card {
+  background: linear-gradient(145deg, #1a0000, #2a0000);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.theater-card:hover {
+  border-color: var(--theater-gold);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+/* Golden text gradient */
+.text-gold-gradient {
+  background: linear-gradient(to bottom, #f9e29c 0%, #d4af37 50%, #b8860b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
