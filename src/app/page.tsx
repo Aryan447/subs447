@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import SearchForm from "@/components/SearchForm";
 import MediaCard from "@/components/MediaCard";
 import SubtitleList from "@/components/SubtitleList";
-import DownloadZipButton from "@/components/DownloadZipButton";
+import DownloadButton from "@/components/DownloadButton";
 import { searchMedia, getSubtitles, getMediaDetails, MediaMetadata, Subtitle } from "@/lib/api";
 import Fuse from "fuse.js";
 
@@ -147,7 +147,7 @@ export default function Home() {
                   ← Return to Gallery
                 </button>
                 {selectedMedia.type === "series" && selectedMedia.videos && (
-                  <DownloadZipButton 
+                  <DownloadButton 
                     episodes={selectedMedia.videos} 
                     mediaName={selectedMedia.name} 
                     label="Download Entire Series (All Seasons)" 
@@ -225,10 +225,10 @@ export default function Home() {
                   <div>
                     <div className="flex justify-between items-center mb-3">
                       <label className="block text-[10px] font-black text-gold/40 uppercase tracking-[0.2em]">Season</label>
-                      <DownloadZipButton 
+                      <DownloadButton 
                         episodes={episodesInSeason} 
                         mediaName={selectedMedia.name} 
-                        label={`S${selectedSeason} ZIP`} 
+                        label={`S${selectedSeason} Download`} 
                         type="season"
                         seasonNumber={selectedSeason}
                         selectedLang={selectedLang}
