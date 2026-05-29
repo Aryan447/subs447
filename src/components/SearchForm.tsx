@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import debounce from "lodash.debounce";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface SearchFormProps {
   onSearch: (query: string) => void;
@@ -32,6 +33,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    triggerHaptic("medium");
     debouncedSearch.cancel();
     if (query.trim()) {
       onSearch(query.trim());

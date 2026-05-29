@@ -3,6 +3,7 @@
 import JSZip from "jszip";
 import { Episode, getSubtitles } from "@/lib/api";
 import { useState, useEffect, useRef } from "react";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface DownloadButtonProps {
   episodes: Episode[];
@@ -47,6 +48,7 @@ export default function DownloadButton({
   }, [isOpen]);
 
   const downloadZip = async () => {
+    triggerHaptic("medium");
     setIsOpen(false);
     setIsDownloading(true);
     setProgress(0);
@@ -108,8 +110,10 @@ export default function DownloadButton({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      triggerHaptic("success");
     } catch (error) {
       console.error("ZIP creation failed:", error);
+      triggerHaptic("error");
       alert("Failed to create ZIP. This might be due to CORS restrictions on subtitle providers.");
     } finally {
       setIsDownloading(false);
@@ -118,6 +122,7 @@ export default function DownloadButton({
   };
 
   const downloadMultipleFiles = async () => {
+    triggerHaptic("medium");
     setIsOpen(false);
     setIsDownloading(true);
     setProgress(0);
@@ -149,6 +154,7 @@ export default function DownloadButton({
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
+            triggerHaptic("light"); // subtle feedback per file downloaded
           }
         } catch (err) {
           console.error(`Failed to download subtitle for ${episode.id}:`, err);
@@ -160,11 +166,13 @@ export default function DownloadButton({
         await new Promise((resolve) => setTimeout(resolve, 600));
       }
 
+      triggerHaptic("success");
       setTimeout(() => {
         alert("Successfully downloaded all subtitles to your Downloads folder!");
       }, 100);
     } catch (error) {
       console.error("Multiple file downloads failed:", error);
+      triggerHaptic("error");
       alert("Failed to complete multiple file downloads.");
     } finally {
       setIsDownloading(false);
@@ -173,8 +181,10 @@ export default function DownloadButton({
   };
 
   const downloadToFolder = async () => {
+    triggerHaptic("medium");
     setIsOpen(false);
     if (!isFolderSupported) {
+      triggerHaptic("error");
       alert("Your browser does not support writing files directly to a folder. Please use a desktop version of Chrome, Edge, Brave, or Opera.");
       return;
     }
@@ -223,6 +233,7 @@ export default function DownloadButton({
             const writable = await fileHandle.createWritable();
             await writable.write(blob);
             await writable.close();
+            triggerHaptic("light");
           }
         } catch (err) {
           console.error(`Failed to download subtitle for ${episode.id}:`, err);
@@ -238,14 +249,17 @@ export default function DownloadButton({
         await Promise.all(batch.map(ep => fetchAndWriteSubtitle(ep)));
       }
 
+      triggerHaptic("success");
       setTimeout(() => {
         alert(`Successfully downloaded all subtitles to the folder "${folderName}"!`);
       }, 100);
     } catch (error: any) {
       if (error.name === "AbortError") {
         console.log("User cancelled folder selection");
+        triggerHaptic("light");
       } else {
         console.error("Folder download failed:", error);
+        triggerHaptic("error");
         alert(`Failed to write to folder: ${error.message || error}`);
       }
     } finally {
@@ -257,7 +271,10 @@ export default function DownloadButton({
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          triggerHaptic("light");
+          setIsOpen(!isOpen);
+        }}
         disabled={isDownloading}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-gold/30 hover:border-gold bg-gold/5 text-gold text-xs font-black uppercase tracking-widest transition-all select-none ${
           isDownloading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
@@ -286,7 +303,7 @@ export default function DownloadButton({
           <div className="py-1">
             <button
               onClick={downloadZip}
-              className="flex items-center w-full px-4 py-3 text-xs text-gold/80 hover:text-gold-light hover:bg-gold/10 transition-all font-black uppercase tracking-wider text-left gap-3"
+              className="flex items-center w-full px-4 py-3 text-xs text-gold/80 hover:text-gold-light hover:bg-gold/10 transition-all font-black uppercase tracking-wider text-left gap-3 w-full cursor-pointer"
             >
               <svg className="w-4 h-4 text-gold/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
@@ -301,7 +318,7 @@ export default function DownloadButton({
           <div className="py-1">
             <button
               onClick={downloadMultipleFiles}
-              className="flex items-center w-full px-4 py-3 text-xs text-gold/80 hover:text-gold-light hover:bg-gold/10 transition-all font-black uppercase tracking-wider text-left gap-3"
+              className="flex items-center w-full px-4 py-3 text-xs text-gold/80 hover:text-gold-light hover:bg-gold/10 transition-all font-black uppercase tracking-wider text-left gap-3 w-full cursor-pointer"
             >
               <svg className="w-4 h-4 text-gold/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
@@ -316,9 +333,9 @@ export default function DownloadButton({
           <div className="py-1">
             <button
               onClick={downloadToFolder}
-              className={`flex items-center w-full px-4 py-3 text-xs text-left gap-3 transition-all font-black uppercase tracking-wider ${
+              className={`flex items-center w-full px-4 py-3 text-xs text-left gap-3 transition-all font-black uppercase tracking-wider w-full ${
                 isFolderSupported 
-                  ? "text-gold/80 hover:text-gold-light hover:bg-gold/10" 
+                  ? "text-gold/80 hover:text-gold-light hover:bg-gold/10 cursor-pointer" 
                   : "text-gold/30 cursor-not-allowed opacity-50"
               }`}
             >

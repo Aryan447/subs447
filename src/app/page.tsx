@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { triggerHaptic } from "@/lib/haptics";
 import SearchForm from "@/components/SearchForm";
 import MediaCard from "@/components/MediaCard";
 import SubtitleList from "@/components/SubtitleList";
@@ -141,7 +142,10 @@ export default function Home() {
             <div className="flex-grow">
               <div className="flex justify-between items-start mb-6">
                 <button 
-                  onClick={() => setSelectedMedia(null)}
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setSelectedMedia(null);
+                  }}
                   className="text-gold hover:text-gold-light flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-all"
                 >
                   ← Return to Gallery
@@ -238,7 +242,10 @@ export default function Home() {
                       {seasons.map(s => (
                         <button
                           key={s}
-                          onClick={() => handleSeasonChange(s)}
+                          onClick={() => {
+                            triggerHaptic("light");
+                            handleSeasonChange(s);
+                          }}
                           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${selectedSeason === s ? 'bg-gold text-black border-gold shadow-[0_0_10px_rgba(212,175,55,0.3)]' : 'bg-transparent text-gold/60 border-gold/20 hover:border-gold/50'}`}
                         >
                           S{s}
@@ -252,7 +259,10 @@ export default function Home() {
                       {episodesInSeason.map(ep => (
                         <button
                           key={ep.id}
-                          onClick={() => handleEpisodeChange(ep.id)}
+                          onClick={() => {
+                            triggerHaptic("light");
+                            handleEpisodeChange(ep.id);
+                          }}
                           className={`aspect-square flex items-center justify-center rounded-lg text-[10px] font-bold transition-all border ${selectedEpisode === ep.id ? 'bg-gold text-black border-gold shadow-[0_0_10px_rgba(212,175,55,0.3)]' : 'bg-transparent text-gold/60 border-gold/20 hover:border-gold/50'}`}
                           title={ep.name}
                         >

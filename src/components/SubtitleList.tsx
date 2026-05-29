@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Subtitle } from "@/lib/api";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface SubtitleListProps {
   subtitles: Subtitle[];
@@ -95,7 +96,10 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 py-4 border-b border-gold/20 sticky top-0 bg-black/90 backdrop-blur-md z-10 -mx-6 px-6 no-scrollbar overflow-x-auto">
         <button
-          onClick={() => onLangChange("all")}
+          onClick={() => {
+            triggerHaptic("light");
+            onLangChange("all");
+          }}
           className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
             selectedLang === "all"
               ? "bg-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)]"
@@ -107,7 +111,10 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
         {languages.map((lang) => (
           <button
             key={lang}
-            onClick={() => onLangChange(lang)}
+            onClick={() => {
+              triggerHaptic("light");
+              onLangChange(lang);
+            }}
             className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
               selectedLang === lang
                 ? "bg-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)]"
@@ -139,6 +146,7 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
                 <a
                   key={sub.id}
                   href={sub.url}
+                  onClick={() => triggerHaptic("medium")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between p-5 rounded-2xl bg-black/40 border-2 border-gold/10 hover:border-gold/50 hover:bg-crimson/10 transition-all group shadow-xl"

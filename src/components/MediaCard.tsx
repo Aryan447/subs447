@@ -1,4 +1,5 @@
 import { MediaMetadata } from "@/lib/api";
+import { triggerHaptic } from "@/lib/haptics";
 
 interface MediaCardProps {
   media: MediaMetadata;
@@ -8,7 +9,10 @@ interface MediaCardProps {
 export default function MediaCard({ media, onClick }: MediaCardProps) {
   return (
     <div 
-      onClick={() => onClick(media)}
+      onClick={() => {
+        triggerHaptic("medium");
+        onClick(media);
+      }}
       className="group cursor-pointer theater-card rounded-xl overflow-hidden transition-all hover:scale-[1.05]"
     >
       <div className="aspect-[2/3] relative overflow-hidden bg-black/40">
