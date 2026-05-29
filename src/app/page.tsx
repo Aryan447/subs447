@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { triggerHaptic } from "@/lib/haptics";
 import SearchForm from "@/components/SearchForm";
 import MediaCard from "@/components/MediaCard";
@@ -21,6 +21,20 @@ export default function Home() {
   // Series specific state
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [selectedEpisode, setSelectedEpisode] = useState<string>("");
+  const [recents, setRecents] = useState<MediaMetadata[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("subsearch_recents");
+      if (saved) {
+        try {
+          setRecents(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse recents", e);
+        }
+      }
+    }
+  }, []);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -49,6 +63,17 @@ export default function Home() {
 
   const handleMediaClick = async (media: MediaMetadata) => {
     setIsLoading(true);
+    
+    // Add to recents history
+    setRecents((prev) => {
+      const filtered = prev.filter((item) => item.id !== media.id);
+      const updated = [media, ...filtered].slice(0, 6);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("subsearch_recents", JSON.stringify(updated));
+      }
+      return updated;
+    });
+
     try {
       const details = await getMediaDetails(media.id, media.type);
       if (details) {
@@ -373,6 +398,32 @@ export default function Home() {
 
       {!selectedMedia && fuzzyResults.length === 0 && !isLoading && (
         <>
+          {recents.length > 0 && (
+            <div className="max-w-7xl mx-auto w-full mb-16 animate-fade-in">
+              <div className="flex justify-between items-center mb-10">
+                <h2 className="text-xl font-serif font-bold text-gold uppercase tracking-[0.2em] flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-gold animate-pulse"></span>
+                  Recent Screenings
+                </h2>
+                <button
+                  onClick={() => {
+                    triggerHaptic("light");
+                    localStorage.removeItem("subsearch_recents");
+                    setRecents([]);
+                  }}
+                  className="text-gold/40 hover:text-gold text-[10px] font-black uppercase tracking-wider border border-gold/15 hover:border-gold/30 px-3 py-1 rounded transition-all cursor-pointer animate-fade-in"
+                >
+                  Clear History
+                </button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+                {recents.map((media) => (
+                  <MediaCard key={media.id} media={media} onClick={handleMediaClick} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-10 w-full max-w-5xl mx-auto">
             {[
               { title: "Grand Premiere", desc: "Instant access to the world's largest subtitle archive.", icon: "M13 10V3L4 14h7v7l9-11h-7z", color: "red-theater" },

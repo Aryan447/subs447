@@ -81,6 +81,50 @@ function getReleaseBadges(fileName: string) {
   return badges;
 }
 
+function adjustSrtTimestamp(timestampLine: string, offsetMs: number): string {
+  const parts = timestampLine.split(" --> ");
+  if (parts.length !== 2) return timestampLine;
+
+  const adjust = (timeStr: string) => {
+    const match = timeStr.match(/(\d{2}):(\d{2}):(\d{2})[,\.](\d{3})/);
+    if (!match) return timeStr;
+    const hrs = parseInt(match[1]);
+    const mins = parseInt(match[2]);
+    const secs = parseInt(match[3]);
+    const ms = parseInt(match[4]);
+    
+    let totalMs = hrs * 3600000 + mins * 60000 + secs * 1000 + ms + offsetMs;
+    if (totalMs < 0) totalMs = 0;
+
+    const newHrs = Math.floor(totalMs / 3600000);
+    totalMs %= 3600000;
+    const newMins = Math.floor(totalMs / 60000);
+    totalMs %= 60000;
+    const newSecs = Math.floor(totalMs / 1000);
+    const newMs = totalMs % 1000;
+
+    const pad = (num: number, size = 2) => String(num).padStart(size, '0');
+    const separator = timeStr.includes(".") ? "." : ",";
+    return `${pad(newHrs)}:${pad(newMins)}:${pad(newSecs)}${separator}${pad(newMs, 3)}`;
+  };
+
+  return `${adjust(parts[0])} --> ${adjust(parts[1])}`;
+}
+
+function adjustSrtText(text: string, offsetSeconds: number): string {
+  const offsetMs = Math.round(offsetSeconds * 1000);
+  if (offsetMs === 0) return text;
+  
+  const lines = text.split("\n");
+  const adjustedLines = lines.map(line => {
+    if (line.includes("-->")) {
+      return adjustSrtTimestamp(line, offsetMs);
+    }
+    return line;
+  });
+  return adjustedLines.join("\n");
+}
+
 function parseSubtitleText(text: string): SubtitleLine[] {
   const lines: SubtitleLine[] = [];
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -124,7 +168,8 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
   const [filterQuery, setFilterQuery] = useState("");
   const [previewSub, setPreviewSub] = useState<Subtitle | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewLines, setPreviewLines] = useState<SubtitleLine[]>([]);
+  const [rawSrtText, setRawSrtText] = useState("");
+  const [syncOffset, setSyncOffset] = useState(0.0);
 
   const languages = useMemo(() => {
     const uniqueLangs = Array.from(new Set(subtitles.map((s) => s.lang)));
@@ -159,6 +204,12 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
     return result;
   }, [subtitles, selectedLang, filterQuery]);
 
+  const previewLines = useMemo(() => {
+    if (!rawSrtText) return [];
+    const adjustedText = adjustSrtText(rawSrtText, syncOffset);
+    return parseSubtitleText(adjustedText);
+  }, [rawSrtText, syncOffset]);
+
   if (subtitles.length === 0) {
     return (
       <div className="text-center py-12">
@@ -189,27 +240,43 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
     triggerHaptic("medium");
     setPreviewSub(sub);
     setPreviewLoading(true);
-    setPreviewLines([]);
+    setRawSrtText("");
+    setSyncOffset(0.0);
 
     try {
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(sub.url)}`;
       const response = await fetch(proxyUrl);
       if (!response.ok) throw new Error("Network error fetching preview");
       const text = await response.text();
-      const lines = parseSubtitleText(text);
-      setPreviewLines(lines);
+      setRawSrtText(text);
     } catch (error) {
       console.error("Preview failed:", error);
-      setPreviewLines([
-        {
-          index: "!",
-          time: "00:00:00,000",
-          text: "Preview unavailable. The file may be in an unsupported format, but you can still download it directly."
-        }
-      ]);
+      setRawSrtText("1\n00:00:00,000 --> 00:00:10,000\nPreview unavailable. The file may be in an unsupported format, but you can still download it directly.");
     } finally {
       setPreviewLoading(false);
     }
+  };
+
+  const downloadSyncedSrt = () => {
+    if (!rawSrtText || !previewSub) return;
+    triggerHaptic("success");
+    const adjustedText = adjustSrtText(rawSrtText, syncOffset);
+    const blob = new Blob([adjustedText], { type: "text/plain;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    const originalName = getSubtitleFileName(previewSub.url);
+    const nameWithoutExt = originalName.toLowerCase().endsWith(".srt") 
+      ? originalName.substring(0, originalName.length - 4)
+      : originalName;
+    const offsetStr = syncOffset > 0 ? `+${syncOffset.toFixed(1)}s` : `${syncOffset.toFixed(1)}s`;
+    link.download = `${nameWithoutExt} (Sync ${offsetStr}).srt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -367,10 +434,77 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
                   triggerHaptic("light");
                   setPreviewSub(null);
                 }}
-                className="text-gold/40 hover:text-gold text-xs font-black uppercase tracking-widest border border-gold/20 hover:border-gold/50 px-3 py-1 rounded-lg transition-all cursor-pointer flex-shrink-0"
+                className="text-gold/40 hover:text-gold text-xs font-black uppercase tracking-widest border border-gold/20 hover:border-gold/50 px-3 py-1 rounded-lg transition-all cursor-pointer flex-shrink-0 animate-fade-in"
               >
                 Close
               </button>
+            </div>
+
+            {/* Sync Adjuster Control Panel */}
+            <div className="px-6 py-4 bg-crimson/20 border-b border-gold/15 flex flex-wrap justify-between items-center gap-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-gold/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span className="text-[9px] font-black uppercase text-gold/60 tracking-widest">Sync Offset</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setSyncOffset(prev => Math.round((prev - 0.5) * 10) / 10);
+                  }}
+                  className="px-2.5 py-1 rounded bg-black/40 hover:bg-gold/10 border border-gold/20 hover:border-gold/50 text-[10px] font-bold text-gold transition-all cursor-pointer"
+                  title="Shift backward 0.5s"
+                >
+                  -0.5s
+                </button>
+                <button
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setSyncOffset(prev => Math.round((prev - 0.1) * 10) / 10);
+                  }}
+                  className="px-2 py-1 rounded bg-black/40 hover:bg-gold/10 border border-gold/20 hover:border-gold/50 text-[10px] font-bold text-gold transition-all cursor-pointer"
+                  title="Shift backward 0.1s"
+                >
+                  -0.1s
+                </button>
+                <div className="px-3 py-1 bg-black/60 border border-gold/30 rounded text-xs font-mono font-bold text-gold min-w-[70px] text-center shadow-inner">
+                  {syncOffset > 0 ? `+${syncOffset.toFixed(1)}` : syncOffset.toFixed(1)}s
+                </div>
+                <button
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setSyncOffset(prev => Math.round((prev + 0.1) * 10) / 10);
+                  }}
+                  className="px-2 py-1 rounded bg-black/40 hover:bg-gold/10 border border-gold/20 hover:border-gold/50 text-[10px] font-bold text-gold transition-all cursor-pointer"
+                  title="Shift forward 0.1s"
+                >
+                  +0.1s
+                </button>
+                <button
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setSyncOffset(prev => Math.round((prev + 0.5) * 10) / 10);
+                  }}
+                  className="px-2.5 py-1 rounded bg-black/40 hover:bg-gold/10 border border-gold/20 hover:border-gold/50 text-[10px] font-bold text-gold transition-all cursor-pointer"
+                  title="Shift forward 0.5s"
+                >
+                  +0.5s
+                </button>
+                {syncOffset !== 0 && (
+                  <button
+                    onClick={() => {
+                      triggerHaptic("light");
+                      setSyncOffset(0.0);
+                    }}
+                    className="ml-2 px-2 py-1 rounded bg-red-theater/20 hover:bg-red-theater/40 border border-red-theater/40 text-[9px] font-black uppercase text-gold transition-all cursor-pointer"
+                    title="Reset sync offset"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Content Area */}
@@ -405,9 +539,26 @@ export default function SubtitleList({ subtitles, selectedLang, onLangChange }: 
             </div>
             
             {/* Footer */}
-            <div className="p-4 border-t border-gold/10 bg-black/60 flex justify-between items-center text-[9px] font-bold text-gold/30 uppercase tracking-wider">
-              <span>Showing first 25 lines</span>
-              <span>Encoding: {previewSub.SubEncoding}</span>
+            <div className="p-4 border-t border-gold/15 bg-black/60 flex justify-between items-center gap-4">
+              <span className="text-[9px] font-bold text-gold/30 uppercase tracking-wider">
+                Showing first 25 lines
+              </span>
+              
+              {syncOffset !== 0 && !previewLoading && (
+                <button
+                  onClick={downloadSyncedSrt}
+                  className="px-3 py-1.5 rounded-lg bg-gold hover:bg-gold-light text-black text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(212,175,55,0.3)] hover:scale-105"
+                >
+                  <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                  </svg>
+                  Download Sync-Adjusted SRT
+                </button>
+              )}
+              
+              <span className="text-[9px] font-bold text-gold/30 uppercase tracking-wider">
+                Encoding: {previewSub.SubEncoding}
+              </span>
             </div>
           </div>
         </div>
