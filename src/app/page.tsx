@@ -206,15 +206,24 @@ export default function Home() {
                         : 0;
                       const height = (avg / 10) * 100;
                       return (
-                        <div key={s} className="flex-grow flex flex-col items-center gap-2 group relative">
-                          <div 
-                            className="w-full bg-gradient-to-t from-red-theater/40 to-gold/40 rounded-t-sm border-x border-t border-gold/20 transition-all group-hover:from-red-theater group-hover:to-gold cursor-help"
-                            style={{ height: `${height}%` }}
+                        <div key={s} className="flex-grow flex flex-col items-center gap-2 group relative h-full justify-end">
+                          <button
+                            onClick={() => {
+                              triggerHaptic("light");
+                              handleSeasonChange(s);
+                            }}
+                            className="w-full h-full flex flex-col justify-end focus:outline-none cursor-pointer group"
+                            title={`Select Season ${s}`}
                           >
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gold text-black text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
-                              Rating: {avg.toFixed(1)}
+                            <div 
+                              className="w-full bg-gradient-to-t from-red-theater/40 to-gold/40 rounded-t-sm border-x border-t border-gold/20 transition-all group-hover:from-red-theater group-hover:to-gold"
+                              style={{ height: `${height}%` }}
+                            >
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gold text-black text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg z-20">
+                                Rating: {avg.toFixed(1)} (Select S{s})
+                              </div>
                             </div>
-                          </div>
+                          </button>
                           <span className="text-[8px] font-black text-gold/30 uppercase tracking-tighter">S{s}</span>
                         </div>
                       );
@@ -290,8 +299,22 @@ export default function Home() {
                   <span className="h-px flex-grow bg-gold/20"></span>
                 </h3>
                 {isSubsLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+                  <div className="space-y-6 pt-6 animate-pulse">
+                    <div className="h-4 bg-gold/15 rounded w-1/4 mb-6"></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Array.from({ length: 4 }).map((_, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-black/20 border-2 border-gold/5 gap-4">
+                          <div className="flex items-center gap-4 flex-grow min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gold/5 border border-gold/10 flex-shrink-0"></div>
+                            <div className="space-y-2 flex-grow min-w-0">
+                              <div className="h-3.5 bg-gold/10 rounded w-4/5"></div>
+                              <div className="h-3 bg-gold/5 rounded w-1/3"></div>
+                            </div>
+                          </div>
+                          <div className="w-10 h-10 rounded-full bg-gold/5 border border-gold/10 flex-shrink-0"></div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <SubtitleList subtitles={subtitles} selectedLang={selectedLang} onLangChange={setSelectedLang} />
@@ -300,11 +323,38 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+          <>
+            <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+            {isLoading && (
+              <div className="max-w-7xl mx-auto mt-16 w-full animate-pulse">
+                <div className="flex items-center gap-6 mb-12">
+                  <div className="h-px flex-grow bg-gold/10"></div>
+                  <h2 className="text-lg font-serif font-bold text-gold/30 uppercase tracking-[0.3em] text-center">
+                    Consulting Cinema Archives...
+                  </h2>
+                  <div className="h-px flex-grow bg-gold/10"></div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <div key={idx} className="flex flex-col rounded-xl overflow-hidden border border-gold/10 bg-black/40">
+                      <div className="aspect-[2/3] bg-gold/5 relative border-b border-gold/5"></div>
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-gold/10 rounded w-3/4"></div>
+                        <div className="flex justify-between items-center">
+                          <div className="h-3 bg-gold/5 rounded w-1/4"></div>
+                          <div className="h-3 bg-gold/5 rounded w-1/5"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {!selectedMedia && fuzzyResults.length > 0 && (
+      {!selectedMedia && fuzzyResults.length > 0 && !isLoading && (
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-6 mb-12">
             <div className="h-px flex-grow bg-gold/20"></div>
