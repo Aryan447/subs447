@@ -117,6 +117,61 @@ export default function DownloadButton({
     }
   };
 
+  const downloadMultipleFiles = async () => {
+    setIsOpen(false);
+    setIsDownloading(true);
+    setProgress(0);
+
+    try {
+      const total = episodes.length;
+      let completed = 0;
+
+      for (const episode of episodes) {
+        try {
+          const subs = await getSubtitles(episode.id, "series");
+          const selectedSub = subs.find(s => s.lang === selectedLang) 
+            || subs.find(s => s.lang === "eng") 
+            || subs[0];
+          
+          if (selectedSub && selectedSub.url) {
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(selectedSub.url)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error(`Failed to fetch via proxy: ${response.statusText}`);
+            const blob = await response.blob();
+            
+            const fileName = `S${String(episode.season).padStart(2, '0')}E${String(episode.episode).padStart(2, '0')} - ${episode.name || 'Episode'}.srt`;
+            
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }
+        } catch (err) {
+          console.error(`Failed to download subtitle for ${episode.id}:`, err);
+        }
+        completed++;
+        setProgress(Math.round((completed / total) * 100));
+        
+        // Wait 600ms between downloads to avoid browser throttling or blocking multi-downloads
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+
+      setTimeout(() => {
+        alert("Successfully downloaded all subtitles to your Downloads folder!");
+      }, 100);
+    } catch (error) {
+      console.error("Multiple file downloads failed:", error);
+      alert("Failed to complete multiple file downloads.");
+    } finally {
+      setIsDownloading(false);
+      setProgress(0);
+    }
+  };
+
   const downloadToFolder = async () => {
     setIsOpen(false);
     if (!isFolderSupported) {
@@ -183,7 +238,6 @@ export default function DownloadButton({
         await Promise.all(batch.map(ep => fetchAndWriteSubtitle(ep)));
       }
 
-      // Small delay to ensure browser completes processes
       setTimeout(() => {
         alert(`Successfully downloaded all subtitles to the folder "${folderName}"!`);
       }, 100);
@@ -228,7 +282,7 @@ export default function DownloadButton({
       )}
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl border-2 border-gold/30 bg-black/95 backdrop-blur-md shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden divide-y divide-gold/10">
+        <div className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl border-2 border-gold/30 bg-black/95 backdrop-blur-md shadow-2xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 overflow-hidden divide-y divide-gold/10">
           <div className="py-1">
             <button
               onClick={downloadZip}
@@ -239,7 +293,22 @@ export default function DownloadButton({
               </svg>
               <div className="flex flex-col">
                 <span>Download as ZIP</span>
-                <span className="text-[9px] font-normal text-gold/40 normal-case mt-0.5">Works on all devices</span>
+                <span className="text-[9px] font-normal text-gold/40 normal-case mt-0.5">Recommended for Mobile • Extracts as a folder</span>
+              </div>
+            </button>
+          </div>
+
+          <div className="py-1">
+            <button
+              onClick={downloadMultipleFiles}
+              className="flex items-center w-full px-4 py-3 text-xs text-gold/80 hover:text-gold-light hover:bg-gold/10 transition-all font-black uppercase tracking-wider text-left gap-3"
+            >
+              <svg className="w-4 h-4 text-gold/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              <div className="flex flex-col">
+                <span>Download as Individual Files</span>
+                <span className="text-[9px] font-normal text-gold/40 normal-case mt-0.5">Downloads directly to phone&apos;s Downloads folder</span>
               </div>
             </button>
           </div>
@@ -257,11 +326,11 @@ export default function DownloadButton({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
               </svg>
               <div className="flex flex-col">
-                <span>Download directly to folder</span>
+                <span>Save directly to a Local Folder</span>
                 <span className="text-[9px] font-normal text-gold/40 normal-case mt-0.5">
                   {isFolderSupported 
-                    ? "Saves files directly (No ZIP extraction)" 
-                    : "Chrome/Edge/Brave only"}
+                    ? "Choose any folder on your computer" 
+                    : "Chrome/Edge/Brave Desktop only"}
                 </span>
               </div>
             </button>
